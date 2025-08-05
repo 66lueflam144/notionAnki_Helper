@@ -54,8 +54,8 @@
 
 2.  **配置 Notion API**:
     *   在项目根目录下创建 `.env` 文件。
-    *   获取您的 Notion API Key 和相关数据库 ID。
-    *   在 `.env` 文件中添加以下内容，替换为您的实际值：
+    *   获取 Notion API Key 和相关数据库 ID。
+    *   在 `.env` 文件中添加以下内容，替换为实际值：
         ```
         NOTION_API_KEY="secret_YOUR_NOTION_API_KEY"
         DATABASE_IDS="your_quiz_db_id,your_study_plan_db_id,your_todo_db_id,your_review_log_db_id"
