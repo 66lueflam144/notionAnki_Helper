@@ -208,12 +208,19 @@ def update_quiz_schedule(review_log_page_id: str):
 
 def main():
     """主函数 - 可以通过命令行参数传入 review_log_page_id"""
-    if len(sys.argv) != 2:
+    if len(sys.argv) < 2:
         print("Usage: python scripts/anki_scheduler.py <review_log_page_id>")
-        sys.exit(1)
+        return
 
     review_log_page_id = sys.argv[1]
     update_quiz_schedule(review_log_page_id)
 
+
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) != 2:
+        print("Usage: python scripts/anki_scheduler.py <review_log_page_id>")
+        sys.exit(1)
+    
+    from config.settings import setup_logging
+    setup_logging()
+    update_quiz_schedule(sys.argv[1])
