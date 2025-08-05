@@ -1,2 +1,67 @@
+# --------------------
+# 敏感信息和私有文件
+# --------------------
+# 忽略环境变量文件，可能包含API密钥等
 .env
+.env.local
+.env.production
+
+# 忽略IDE配置文件
+# PyCharm
+.idea/
+# VS Code
+.vscode/
+
+# 忽略可能会自动生成的JSON文件
+# 注意：如果你需要提交某个特定的 JSON 文件，请在后面用 ! 规则取消忽略
+# 例如：如果你想忽略 *.json 但保留 package.json，可以添加一行 !package.json
 *.json
+
+# --------------------
+# Python 相关文件
+# --------------------
+# 忽略Python字节码文件
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+
+# 忽略虚拟环境目录
+venv/
+env/
+.venv/
+.virtual_env/
+
+# 忽略打包和构建目录
+dist/
+build/
+*.egg-info/
+
+# 忽略pip相关文件
+pip-log.txt
+pip-delete-this-directory.txt
+
+# 忽略测试报告和覆盖率文件
+.coverage
+.pytest_cache/
+htmlcov/
+
+# --------------------
+# 操作系统相关文件
+# --------------------
+# 忽略macOS系统文件
+.DS_Store
+
+# 忽略Windows系统文件
+Thumbs.db
+
+# 忽略日志文件
+*.log
+
+# --------------------
+# Git 本身相关文件
+# --------------------
+# 忽略Git工作区文件
+.git/
+.gitattributes
+.gitmodules
