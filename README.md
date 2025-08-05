@@ -113,3 +113,77 @@ python main.py
 -   [Notion Database and Properties](https://developers.notion.com/reference/property-object)
 -   [Notion Integration](https://developers.notion.com/reference/capabilities)
 -   [How to Study for Exams An Evidence Based Masterclass](https://youtu.be/Lt54CX9DmS4?feature=shared)
+
+---
+
+## 我的数据库页面模板
+
+>Quiz库
+
+```json
+{
+  "所属课程": "select",
+  "下次回顾时间": "date",
+  "难度": "select",
+  "最近回顾效果": "rollup",
+  "Quiz回顾日志": "relation",
+  "created time": "created_time",
+  "回顾次数": "rollup",
+  "最近回顾时间": "rollup",
+  "题目内容": "rich_text",
+  "回顾率标签": "select",
+  "章节/关键词": "multi_select",
+  "Quiz题目": "title"
+}
+```
+
+---
+
+>Quiz回顾日志
+
+```json
+{
+  "回顾时间": "date",
+  "是否答对": "checkbox",
+  "回顾效果": "select",
+  "所属Quiz题目": "relation",
+  "回答内容": "rich_text",
+  "回顾反思": "rich_text",
+  "回顾标题": "title"
+}
+```
+
+---
+
+>Todo库
+
+```json
+{
+  "科目": "select",
+  "预计完成时间": "date",
+  "时间段安排": "date",
+  "完成情况": "status",
+  "任务类型": "multi_select",
+  "复盘总结": "rich_text",
+  "优先级": "select",
+  "关联计划": "relation",
+  "ToDo名称": "title"
+}
+```
+
+---
+
+>学习计划
+
+```json
+{
+  "学习状态": "select",
+  "学习内容": "rich_text",
+  "是否含quiz": "checkbox",
+  "是否完成": "checkbox",
+  "科目": "multi_select",
+  "Date": "date",
+  "备注，调整记录": "rich_text",
+  "关键词": "title"
+}
+```
