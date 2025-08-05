@@ -215,6 +215,7 @@ def create_study_plan_and_todos(notion_manager, selected_subjects, selected_chap
                 logger.warning(f"Status '{status_to_set}' might not be a valid option for Study Plan '学习状态'.")
             study_plan_props["学习状态"] = {"select": format_property_for_create(status_schema, "TODO")}
 
+        logger.debug(f"Study Plan page properties to create: {json.dumps(study_plan_props, indent=2, ensure_ascii=False)}")
         # 创建页面
         study_plan_page = notion_manager.create_page(study_plan_db_id, study_plan_props)
         study_plan_page_id = study_plan_page["id"]
@@ -265,6 +266,7 @@ def create_study_plan_and_todos(notion_manager, selected_subjects, selected_chap
                     todo_props["任务类型"] = {
                         "multi_select": format_property_for_create(task_type_schema, task_types_str)}
 
+                logger.debug(f"Todo page properties to create for '{todo_title}': {json.dumps(todo_props, indent=2, ensure_ascii=False)}")
                 # 创建 Todo 页面
                 notion_manager.create_page(todo_db_id, todo_props)
                 logger.info(f"Created Todo page for '{todo_title}'")

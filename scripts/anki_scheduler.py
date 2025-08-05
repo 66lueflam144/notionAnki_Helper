@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 from datetime import datetime, timedelta
-
+from config.settings import settings
 from core.data_parser import parse_page_property_value
 from core.notion_client_wrapper import NotionManager
 from utils.helper import format_property_for_update
@@ -73,8 +73,9 @@ def update_quiz_schedule(review_log_page_id: str):
     基于一条 Quiz回顾日志，更新其关联 Quiz 题目的下次回顾时间。
     :param review_log_page_id: 刚创建或更新的 Quiz回顾日志 页面 ID。
     """
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    # logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
+    # logger = setup_logging()
     logger.info(f"Starting ANKI update process for review log: {review_log_page_id}")
 
     # 1. 加载数据库 ID
@@ -191,7 +192,9 @@ def update_quiz_schedule(review_log_page_id: str):
 
     # 8. 构造更新数据
     properties_to_update = {
-        "下次回顾时间": formatted_new_date
+        "下次回顾时间": {
+            "date": formatted_new_date
+        }
     }
     logger.debug(f"DEBUG: properties_to_update = {properties_to_update}")
     logger.debug(f"Prepared properties update data: {properties_to_update}")

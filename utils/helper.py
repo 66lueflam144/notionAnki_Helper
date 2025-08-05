@@ -28,7 +28,9 @@ def _format_common_property_value(prop_type: str, user_input: str):
             return user_input if user_input else None
         elif prop_type == "date":
             # 基本日期格式化，假设用户输入是 ISO 字符串 (e.g., "2024-10-28" or "2024-10-28T10:00:00Z")
-            return {"start": user_input} if user_input else None
+            formatted_date = {"start": user_input} if user_input else None
+            logger.debug(f"[_format_common_property_value] Date input: '{user_input}', formatted: {formatted_date}")
+            return formatted_date
         # 可以根据需要为其他通用类型添加处理...
     except ValueError as e:
         logger.error(f"Error converting input '{user_input}' for type '{prop_type}': {e}")
@@ -149,4 +151,3 @@ def format_property_for_update(property_schema: dict, user_input: str):
     else:
         logger.info(f"Unknown or unhandled property type '{prop_type}' for property '{prop_name}' during update. Returning raw input.")
         return user_input
-

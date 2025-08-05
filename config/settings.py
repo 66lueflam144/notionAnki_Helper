@@ -17,7 +17,7 @@ def setup_logging():
         datefmt="%Y-%m-%d %H:%M:%S",  # 自定义日期格式
         # 自定义颜色
         log_colors={
-            'DEBUG':    'cyan',
+            'DEBUG':    'green',
             'INFO':     'green',
             'WARNING':  'yellow',
             'ERROR':    'red',
