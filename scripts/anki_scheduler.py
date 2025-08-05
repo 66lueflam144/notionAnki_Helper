@@ -7,6 +7,7 @@ from config.settings import settings
 from core.data_parser import parse_page_property_value
 from core.notion_client_wrapper import NotionManager
 from utils.helper import format_property_for_update
+from core.ai_service import evaluate_answer
 
 logger = logging.getLogger(__name__)
 
@@ -197,6 +198,32 @@ def update_quiz_schedule(review_log_page_id: str):
     }
     logger.debug(f"DEBUG: properties_to_update = {properties_to_update}")
     logger.debug(f"Prepared properties update data: {properties_to_update}")
+
+    # AI评估与反馈
+    quiz_question = parse_page_property_value(quiz_props.get("Quiz题目", {}))
+    correct_answer = parse_page_property_value(quiz_props.get("参考答案", {}))
+    user_answer = parse_page_property_value(log_page_props.get("回答内容", {}))
+
+    logger.debug(f"Data for AI Eval: Question='{quiz_question}', CorrectAnswer='{correct_answer}', UserAnswer='{user_answer}'")
+
+    if correct_answer and user_answer:
+        logger.info("Found reference answer and user answer, proceeding with AI evaluation.")
+        ai_result = evaluate_answer(quiz_question, correct_answer, user_answer)
+        logger.debug(f"AI evaluation result: {ai_result}")
+
+        if ai_result:
+            try:
+                feedback_props = {
+                    "AI评估结果": {"select": {"name": ai_result["evaluation"]}},
+                    "AI反馈": {"rich_text": [{"text": {"content": ai_result["feedback"]}}]}
+                }
+                logger.debug(f"Updating review log with AI feedback props: {feedback_props}")
+                notion_manager.update_page_properties(review_log_page_id, feedback_props)
+                logger.info(f"Successfully updated review log {review_log_page_id} with AI feedback.")
+            except Exception as e:
+                logger.error(f"Failed to update review log with AI feedback: {e}")
+    else:
+        logger.info("Skipping AI evaluation because reference answer or user answer is missing.")
 
     # 9. 更新 Quiz 页面
     try:

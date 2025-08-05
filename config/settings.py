@@ -35,6 +35,8 @@ load_dotenv(dotenv_path=env_path)
 
 class Settings:
     NOTION_API_KEY = os.getenv("NOTION_API_KEY")
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
     DATABASE_IDS = [db_id.strip() for db_id in os.getenv("DATABASE_IDS", "").split(",") if db_id.strip()]
     LOCAL_DATA_PATH = os.getenv("LOCAL_DATA_PATH", "./model")
     PAGE_ID = os.getenv("PAGE_ID")
