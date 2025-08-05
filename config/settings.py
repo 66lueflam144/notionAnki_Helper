@@ -2,41 +2,25 @@ import os
 from dotenv import load_dotenv
 import logging
 import logging.config
-import colorlog
+from rich.logging import RichHandler
 
 
 def setup_logging():
-    """配置全局日志，包括 colorlog"""
-    # 定义日志格式
-    # %(log_color)s 是 colorlog 特有的，用于根据日志级别着色
-    log_format = "%(log_color)s%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    """配置全局日志，使用 rich.logging"""
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)  # 设置根日志级别
+    root_logger.handlers.clear()  # 清除现有 handlers
 
-    # 配置 colorlog 的 formatter
-    formatter = colorlog.ColoredFormatter(
-        log_format,
-        datefmt="%Y-%m-%d %H:%M:%S",  # 自定义日期格式
-        # 自定义颜色
-        log_colors={
-            'DEBUG':    'green',
-            'INFO':     'green',
-            'WARNING':  'yellow',
-            'ERROR':    'red',
-            'CRITICAL': 'red,bg_white',
-        }
+    # 创建 RichHandler
+    rich_handler = RichHandler(
+        rich_tracebacks=True,
+        tracebacks_show_locals=True,
+        markup=True,
+        log_time_format="[%Y-%m-%d %H:%M:%S]"
     )
 
-    # 创建控制台处理器 (StreamHandler)
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-
-    # 获取 root logger (这是全局 logger)
-    root_logger = logging.getLogger()
-    # 设置 root logger 的级别
-    root_logger.setLevel(logging.INFO)  # 或者从环境变量读取
-    # 清除现有的 handlers (防止重复添加)
-    root_logger.handlers.clear()
-    # 添加我们配置好的 colorlog handler
-    root_logger.addHandler(console_handler)
+    # 添加 RichHandler
+    root_logger.addHandler(rich_handler)
 
 
 # 指定.env文件的绝对路径

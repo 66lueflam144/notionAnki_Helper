@@ -8,6 +8,8 @@ from core.data_parser import parse_page_property_value
 from core.notion_client_wrapper import NotionManager
 from utils.helper import format_property_for_update
 
+logger = logging.getLogger(__name__)
+
 # --- 配置 ---
 # 从 database_ids.json 加载数据库 ID
 def load_database_ids():
@@ -73,9 +75,6 @@ def update_quiz_schedule(review_log_page_id: str):
     基于一条 Quiz回顾日志，更新其关联 Quiz 题目的下次回顾时间。
     :param review_log_page_id: 刚创建或更新的 Quiz回顾日志 页面 ID。
     """
-    # logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    logger = logging.getLogger(__name__)
-    # logger = setup_logging()
     logger.info(f"Starting ANKI update process for review log: {review_log_page_id}")
 
     # 1. 加载数据库 ID
@@ -201,10 +200,55 @@ def update_quiz_schedule(review_log_page_id: str):
 
     # 9. 更新 Quiz 页面
     try:
-        updated_page = notion_manager.update_page_properties(quiz_page_id, properties_to_update)
+        notion_manager.update_page_properties(quiz_page_id, properties_to_update)
         logger.info(f"Successfully updated '下次回顾时间' for Quiz page {quiz_page_id} to {new_next_review_date_str}")
+
+        # 10. 标记回顾日志为“已处理”
+        logger.info(f"Marking review log {review_log_page_id} as processed...")
+        processed_props = {"是否已处理": {"checkbox": True}}
+        notion_manager.update_page_properties(review_log_page_id, processed_props)
+        logger.info(f"Successfully marked review log {review_log_page_id} as processed.")
+
     except Exception as e:
-        logger.error(f"Error updating Quiz page {quiz_page_id}: {e}")
+        logger.error(f"Error during page update or marking as processed for review log {review_log_page_id}: {e}")
+
+def process_all_review_logs():
+    """获取并处理所有未被处理的 Quiz 回顾日志"""
+    logger.info("Starting to process all unprocessed review logs...")
+    notion_manager = NotionManager()
+
+    try:
+        db_ids = load_database_ids()
+        review_log_db_id = db_ids.get("Quiz回顾日志")
+        if not review_log_db_id:
+            logger.error("'Quiz回顾日志' database ID not found in database_ids.json.")
+            return
+    except Exception as e:
+        logger.error(f"Failed to load database IDs: {e}")
+        return
+
+    # 查询所有“是否已处理”为 false 的日志
+    filter_obj = {
+        "property": "是否已处理",
+        "checkbox": {
+            "equals": False
+        }
+    }
+
+    try:
+        unprocessed_logs = list(notion_manager.query_database(review_log_db_id, filter_=filter_obj))
+        logger.info(f"Found {len(unprocessed_logs)} unprocessed review logs.")
+
+        for log_page in unprocessed_logs:
+            log_page_id = log_page["id"]
+            logger.info(f"--- Processing log: {log_page_id} ---")
+            update_quiz_schedule(log_page_id)
+        
+        logger.info("Finished processing all review logs.")
+
+    except Exception as e:
+        logger.error(f"An error occurred while processing review logs: {e}")
+
 
 def main():
     """主函数 - 可以通过命令行参数传入 review_log_page_id"""

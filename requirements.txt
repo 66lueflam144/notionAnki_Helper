@@ -1,0 +1,4 @@
+python-dotenv
+notion-client
+rich
+pyfiglet

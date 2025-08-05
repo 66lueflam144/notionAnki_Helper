@@ -1,7 +1,7 @@
 import json
 import logging
 from datetime import datetime, timedelta
-
+import os
 from config.settings import settings
 from core.data_parser import parse_page_property_value
 from core.notion_client_wrapper import NotionManager
@@ -81,7 +81,7 @@ def select_daily_quizzes(quizzes: list, min_subjects=2, max_subjects=3, min_quiz
     """
     根据规则选择每日要复习的 Quiz。
     :param quizzes: 待复习的 Quiz 列表。
-    :return: (selected_subjects_list, selected_quizzes_dict)
+    :return: (selected_subjects_list, selected_chapters_dict, selected_quiz_ids)
     """
     logger.info("Selecting daily quizzes based on new rules...")
 
@@ -135,24 +135,45 @@ def select_daily_quizzes(quizzes: list, min_subjects=2, max_subjects=3, min_quiz
     
     # 将 quiz 对象转换为 chapter 字典以适应现有函数
     selected_chapters_dict = {}
+    selected_quiz_ids = set()
     for subject, quiz_list in selected_quizzes_dict.items():
         chapters = set()
         for quiz in quiz_list:
+            selected_quiz_ids.add(quiz["id"])
             quiz_chapters = parse_page_property_value(quiz["properties"].get("章节/关键词", {}))
             if quiz_chapters:
                 chapters.update(quiz_chapters)
         selected_chapters_dict[subject] = list(chapters)
 
-    return selected_subjects_list, selected_chapters_dict
+    return selected_subjects_list, selected_chapters_dict, selected_quiz_ids
 
 
-def create_study_plan_and_todos(notion_manager: NotionManager, selected_subjects: list, selected_chapters: dict, study_plan_db_id: str, todo_db_id: str):
+def create_study_plan_and_todos(notion_manager: NotionManager, selected_subjects: list, selected_chapters: dict, study_plan_db_id: str, todo_db_id: str, plan_date: datetime.date):
     """
-    创建学习计划和 Todo 任务。
+    创建学习计划和 Todo 任务, 并避免重复创建。
+    :param plan_date: The specific date for which to create the plan.
     """
-    logger.info("Creating Study Plan and Todo items...")
+    logger.info(f"Attempting to create Study Plan and Todos for {plan_date.isoformat()}...")
+    plan_date_str = plan_date.isoformat()
+
+    # 1. 检查是否已存在当天的学习计划
+    try:
+        existing_plan_filter = {
+            "property": "Date",
+            "date": {
+                "equals": plan_date_str
+            }
+        }
+        existing_plans = list(notion_manager.query_database(study_plan_db_id, filter_=existing_plan_filter))
+        if existing_plans:
+            logger.warning(f"A study plan for {plan_date_str} already exists. Skipping creation.")
+            return
+    except Exception as e:
+        logger.error(f"Error checking for existing study plan: {e}")
+        return
+
     if not selected_subjects:
-        logger.warning("No subjects selected, cannot create study plan.")
+        logger.warning(f"No subjects selected for {plan_date_str}, cannot create study plan.")
         return
 
     try:
@@ -162,8 +183,7 @@ def create_study_plan_and_todos(notion_manager: NotionManager, selected_subjects
         logger.error(f"Failed to retrieve database schemas: {e}")
         return
 
-    today_str = datetime.utcnow().date().isoformat()
-    plan_title = f"每日学习计划 - {today_str}"
+    plan_title = f"每日学习计划 - {plan_date_str}"
     study_plan_page_id = None
 
     # --- 1. 创建 学习计划 条目 ---
@@ -175,7 +195,7 @@ def create_study_plan_and_todos(notion_manager: NotionManager, selected_subjects
 
         # 'Date' (Date)
         date_schema = study_plan_schema.get("properties", {}).get("Date", {})
-        study_plan_props["Date"] = {"date": format_property_for_create(date_schema, today_str)}
+        study_plan_props["Date"] = {"date": format_property_for_create(date_schema, plan_date_str)}
 
         # '科目' (Multi-Select)
         subject_schema = study_plan_schema.get("properties", {}).get("科目", {})
@@ -217,7 +237,17 @@ def create_study_plan_and_todos(notion_manager: NotionManager, selected_subjects
 
                 # '预计完成时间' (Date)
                 due_date_schema = todo_schema.get("properties", {}).get("预计完成时间", {})
-                todo_props["预计完成时间"] = {"date": format_property_for_create(due_date_schema, today_str)}
+                todo_props["预计完成时间"] = {"date": format_property_for_create(due_date_schema, plan_date_str)}
+
+                # '时间段安排' (Date Range)
+                date_range_schema = todo_schema.get("properties", {}).get("时间段安排", {})
+                # For a single day, start and end are the same.
+                date_range_value = {"start": plan_date_str, "end": None}
+                todo_props["时间段安排"] = {"date": date_range_value}
+
+                # '优先级' (Priority)
+                priority_schema = todo_schema.get("properties", {}).get("优先级", {})
+                todo_props["优先级"] = {"select": format_property_for_create(priority_schema, "mid")} # Default to 'mid'
 
                 # '关联计划' (Relation)
                 relation_schema = todo_schema.get("properties", {}).get("关联计划", {})
@@ -237,4 +267,71 @@ def create_study_plan_and_todos(notion_manager: NotionManager, selected_subjects
     except Exception as e:
         logger.error(f"Error creating Todo pages: {e}")
 
-    logger.info(f"Finished creating plan. Created {todo_count} Todo items.")
+    logger.info(f"Finished creating plan for {plan_date_str}. Created {todo_count} Todo items.")
+
+
+def generate_period_plan(days_to_plan: int):
+    """
+    为未来 N 天生成学习计划。
+    """
+    logger.info(f"Generating study plan for the next {days_to_plan} days...")
+    notion_manager = NotionManager()
+
+    # Load DB IDs
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
+    ids_file_path = os.path.join(project_root, "data", "database_ids.json")
+    try:
+        with open(ids_file_path, 'r', encoding='utf-8') as f:
+            db_ids = json.load(f)
+        QUIZ_DB_ID = db_ids["Quiz库"]
+        STUDY_PLAN_DB_ID = db_ids["学习计划"]
+        TODO_DB_ID = db_ids["Todo库"]
+    except Exception as e:
+        logger.error(f"Failed to load database IDs: {e}")
+        return
+
+    # 1. quizzes pool
+    upcoming_quizzes_pool = get_upcoming_quizzes(notion_manager, QUIZ_DB_ID, days_ahead=days_to_plan + 7)
+    if not upcoming_quizzes_pool:
+        logger.info("No upcoming quizzes found in the planning period. Exiting.")
+        return
+    
+    # 按日期对池进行排序，以优先处理更紧急的任务
+    upcoming_quizzes_pool.sort(key=lambda q: parse_page_property_value(q["properties"].get("下次回顾时间", {})) or "9999-12-31")
+
+
+    # 2. 对每一天进行计划
+    today = datetime.utcnow().date()
+    for i in range(days_to_plan):
+        current_plan_date = today + timedelta(days=i)
+        logger.info(f"--- Planning for date: {current_plan_date.isoformat()} ---")
+
+        if not upcoming_quizzes_pool:
+            logger.warning(f"No more quizzes in the pool to plan for {current_plan_date.isoformat()}.")
+            break
+
+        # 3. 为目前日期选择quiz
+        selected_subjects, selected_chapters, selected_ids = select_daily_quizzes(upcoming_quizzes_pool)
+        
+        if not selected_subjects:
+            logger.info(f"No quizzes selected for {current_plan_date.isoformat()}. Moving to next day.")
+            continue
+
+        # 4. 对当前日期创建学习计划
+        create_study_plan_and_todos(
+            notion_manager,
+            selected_subjects,
+            selected_chapters,
+            STUDY_PLAN_DB_ID,
+            TODO_DB_ID,
+            plan_date=current_plan_date
+        )
+
+        # 5. 将被分配的quiz池中取出
+        upcoming_quizzes_pool = [
+            quiz for quiz in upcoming_quizzes_pool if quiz["id"] not in selected_ids
+        ]
+        logger.info(f"{len(upcoming_quizzes_pool)} quizzes remaining in the pool.")
+
+    logger.info(f"Finished planning for {days_to_plan} days.")

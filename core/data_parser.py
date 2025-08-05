@@ -1,4 +1,3 @@
-# core/data_parser.py
 """
 模块用于将 Notion API 返回的复杂页面属性值对象解析为简单的 Python 数据类型。
 遵循 Notion API 关于页面属性值的文档:

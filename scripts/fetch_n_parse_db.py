@@ -1,9 +1,3 @@
-# scripts/fetch_and_parse_db.py
-"""
-示例脚本：列出可访问的数据库，让用户选择一个，
-然后获取该数据库的所有页面并解析其属性。
-"""
-
 from core.notion_client_wrapper import NotionManager
 from core.data_parser import parse_page_property_value
 import json
